@@ -1,0 +1,35 @@
+# Publishes the app as a website (GitHub Pages) so you can open it on a laptop or phone browser and install it as an app.
+# One time: repo Settings > Pages > Build and deployment > Source = "GitHub Actions".
+# No keys are published. Each device connects to your server once with the connection code (Settings > Server connection).
+name: Publish web app
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [index.html, sw.js, manifest.webmanifest, icon-192.png, icon-512.png, .github/workflows/pages.yml]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect the site
+        run: |
+          mkdir -p site
+          cp index.html sw.js manifest.webmanifest icon-192.png icon-512.png site/
+          echo "" > site/sync-config.js
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
