@@ -1,6 +1,6 @@
 # Publishes the app as a website (GitHub Pages) so you can open it on a laptop or phone browser and install it as an app.
 # One time: repo Settings > Pages > Build and deployment > Source = "GitHub Actions".
-# No keys are published. Each device connects to your server once with the connection code (Settings > Server connection).
+# The page needs your server address and the read-only CHECK_KEY (the same two values the APK carries). Add them as repo secrets SYNC_URL and CHECK_KEY in THIS repo (Settings > Secrets and variables > Actions), then run the workflow.
 name: Publish web app
 on:
   workflow_dispatch:
@@ -23,10 +23,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Collect the site
+        env:
+          SYNC_URL: ${{ secrets.SYNC_URL }}
+          CHECK_KEY: ${{ secrets.CHECK_KEY }}
         run: |
           mkdir -p site
           cp index.html sw.js manifest.webmanifest icon-192.png icon-512.png site/
-          echo "" > site/sync-config.js
+          if [ -n "$SYNC_URL" ] && [ -n "$CHECK_KEY" ]; then
+            printf 'window.GB_UPD={url:"%s",key:"%s"};\n' "$SYNC_URL" "$CHECK_KEY" > site/sync-config.js
+          else
+            echo "::warning::SYNC_URL or CHECK_KEY secret is missing in this repo, so the web page will not know your server."
+            echo "" > site/sync-config.js
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
